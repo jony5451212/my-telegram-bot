@@ -3,22 +3,26 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
+const os = require('os'); // Add os module
+
 // Excel generatsiya qilish
 function generateExcel(data, sheetName) {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
 
     // Auto-width columns (simple estimation)
-    const colWidths = data[0].map((_, i) => {
-        const maxLen = data.reduce((max, row) => Math.max(max, (row[i] || '').toString().length), 10);
-        return { wch: maxLen + 2 };
-    });
-    ws['!cols'] = colWidths;
+    if (data.length > 0) { // Safety check
+        const colWidths = data[0].map((_, i) => {
+            const maxLen = data.reduce((max, row) => Math.max(max, (row[i] || '').toString().length), 10);
+            return { wch: maxLen + 2 };
+        });
+        ws['!cols'] = colWidths;
+    }
 
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
     const filename = `${sheetName}_${Date.now()}.xlsx`;
-    const filePath = path.join(__dirname, filename);
+    const filePath = path.join(os.tmpdir(), filename); // Use temp dir
 
     XLSX.writeFile(wb, filePath);
     return filePath;
@@ -29,7 +33,7 @@ function generatePDF(data, sheetName) {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument();
         const filename = `${sheetName}_${Date.now()}.pdf`;
-        const filePath = path.join(__dirname, filename);
+        const filePath = path.join(os.tmpdir(), filename); // Use temp dir
 
         const stream = fs.createWriteStream(filePath);
         doc.pipe(stream);

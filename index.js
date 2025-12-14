@@ -650,11 +650,7 @@ bot.catch((err, ctx) => {
     } catch (e) { }
 });
 
-// Main Menu Keyboard
-const mainMenu = Markup.keyboard([
-    ['Xodim haqida ma\'lumotlar', 'Dalolatnoma kiritish'],
-    ['🔒 Admin Panel']
-]).resize();
+
 
 // Start command - Shows the Main Menu
 bot.start(async (ctx) => {

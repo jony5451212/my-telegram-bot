@@ -275,7 +275,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         }
 
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, korxona nomini matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, korxona nomini matn ko\'rinishida yozing.', navKeyboard);
 
         ctx.scene.state.data.korxona = capitalize(ctx.message.text);
 
@@ -307,7 +307,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         }
 
         ctx.scene.state.data.rasmiylashtirdi = ctx.message.text;
-        await ctx.reply('3. Tuman nomini kiriting:', cancelKeyboard);
+        await ctx.reply('3. Tuman nomini kiriting:', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -318,10 +318,10 @@ const dalolatnomaWizard = new Scenes.WizardScene(
             return ctx.scene.leave();
         }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', navKeyboard);
 
         ctx.scene.state.data.tuman = capitalize(ctx.message.text);
-        await ctx.reply('4. Dalolatnoma raqamini kiriting (faqat raqam):', cancelKeyboard);
+        await ctx.reply('4. Dalolatnoma raqamini kiriting (faqat raqam):', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -332,13 +332,13 @@ const dalolatnomaWizard = new Scenes.WizardScene(
             return ctx.scene.leave();
         }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', navKeyboard);
 
         // Format DKSH prefix
         const numberInput = ctx.message.text.replace(/\D/g, ''); // faqat raqamlarni olamiz
         ctx.scene.state.data.raqam = `DKSH ${numberInput}`;
 
-        await ctx.reply('5. Dalolatnoma sanasini kiriting (kun.oy.yil):', cancelKeyboard);
+        await ctx.reply('5. Dalolatnoma sanasini kiriting (kun.oy.yil):', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -349,7 +349,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
             return ctx.scene.leave();
         }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', navKeyboard);
 
         ctx.scene.state.data.sana = ctx.message.text;
 
@@ -381,7 +381,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         const answer = ctx.message.text;
 
         if (answer === '❌ Yo\'q') {
-            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', cancelKeyboard);
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', navKeyboard);
             return ctx.scene.reenter(); // Use reenter instead of wizard.selectStep(0) for cleaner reset
         }
 
@@ -408,7 +408,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 // Bind enter logic for Dalolatnoma too (optional but good consistency)
 dalolatnomaWizard.enter(async (ctx) => {
     ctx.scene.state.data = {};
-    await ctx.reply('Yangi dalolatnoma kiritish.\n\n1. Korxona nomini kiriting:', cancelKeyboard);
+    await ctx.reply('Yangi dalolatnoma kiritish.\n\n1. Korxona nomini kiriting:', navKeyboard);
 });
 
 
@@ -672,11 +672,18 @@ bot.hears('Dalolatnoma kiritish', async (ctx) => {
 });
 
 // Handle "Admin Panel" button
+// Handle "Admin Panel" button
 bot.hears('🔒 Admin Panel', async (ctx) => {
     await ctx.scene.enter('admin_scene');
 });
 
-// Catch-all for unhandled messages (prevents "freezing" feeling)
+// Global "Main Menu" handler (failsafe for session loss)
+bot.hears('🏠 Bosh menyu', async (ctx) => {
+    try { await ctx.scene.leave(); } catch (e) { }
+    await ctx.reply('Bosh menyu:', mainMenu);
+});
+
+// Catch-all for unhandled messages
 bot.on('message', async (ctx) => {
     // If not in a scene and no other handler matched
     // We suggest /start to reset

@@ -715,7 +715,7 @@ bot.start(async (ctx) => {
         await ctx.scene.leave(); // Ensure we are not in a scene
     } catch (e) { }
 
-    await ctx.reply('Assalomu alaykum! Kerakli bo\'limni tanlang:', mainMenu);
+    await ctx.reply('Assalomu alaykum! (v2.0 Yangilandi ✅)\nKerakli bo\'limni tanlang:', mainMenu);
 });
 
 // Handle "Xodim haqida ma'lumotlar" button

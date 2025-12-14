@@ -382,12 +382,14 @@ adminScene.on('text', async (ctx) => {
         await ctx.reply('✅ Admin rejimidasiz! Kerakli bo\'limni tanlang:',
             Markup.keyboard([
                 ['📊 Statistika', '👥 Foydalanuvchilar'],
+                ['📥 Ma\'lumotlarni yuklash'],
                 ['🔙 Chiqish']
             ]).resize()
         );
         return ctx.scene.enter('admin_dashboard');
     } else {
-        await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
+        [
+            await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
     }
 });
 
@@ -489,6 +491,63 @@ async function showStatsPage(ctx, type, page = 1, isEdit = false) {
     }
 }
 
+// Export handlers
+adminDashboard.hears('📥 Ma\'lumotlarni yuklash', async (ctx) => {
+    await ctx.reply('Qaysi ma\'lumotni yuklab olmoqchisiz?', Markup.inlineKeyboard([
+        [Markup.button.callback('👤 Xodimlar', 'export_type:Malumot1')],
+        [Markup.button.callback('📝 Dalolatnomalar', 'export_type:Dalolatnomalar')]
+    ]));
+});
+
+// 1. Type selected, ask for Format
+adminDashboard.action(/export_type:(.+)/, async (ctx) => {
+    const sheetName = ctx.match[1];
+    await ctx.answerCbQuery();
+    await ctx.deleteMessage(); // Clean up previous menu
+
+    await ctx.reply(`"${sheetName}" uchun formatni tanlang:`, Markup.inlineKeyboard([
+        [Markup.button.callback('📊 Excel (.xlsx)', `export_fmt:${sheetName}:xlsx`)],
+        [Markup.button.callback('📄 PDF (.pdf)', `export_fmt:${sheetName}:pdf`)]
+    ]));
+});
+
+// 2. Format selected, Perform Export
+adminDashboard.action(/export_fmt:(.+):(.+)/, async (ctx) => {
+    const sheetName = ctx.match[1];
+    const format = ctx.match[2];
+    await ctx.answerCbQuery();
+    await ctx.deleteMessage();
+
+    await ctx.reply('⏳ Fayl tayyorlanmoqda, kuting...');
+
+    try {
+        const { getRows } = require('./sheets');
+        const { generateExcel, generatePDF, deleteFile } = require('./exportService');
+
+        const rows = await getRows(sheetName);
+
+        if (!rows || rows.length === 0) {
+            return ctx.reply('❌ Ma\'lumot topilmadi.');
+        }
+
+        let filePath;
+        if (format === 'xlsx') {
+            filePath = generateExcel(rows, sheetName);
+        } else {
+            filePath = await generatePDF(rows, sheetName);
+        }
+
+        await ctx.replyWithDocument({ source: filePath, filename: `${sheetName}.${format}` });
+
+        // Delete temp file after sending
+        deleteFile(filePath);
+
+    } catch (e) {
+        console.error('Export xatolik:', e);
+        await ctx.reply('❌ Fayl yuklashda xatolik yuz berdi.');
+    }
+});
+
 adminDashboard.hears('📊 Statistika', async (ctx) => {
     // Ask which stats
     await ctx.reply('Qaysi ma\'lumotlarni ko\'rmoqchisiz?', Markup.inlineKeyboard([
@@ -504,6 +563,7 @@ adminDashboard.action(/stats_type:(.+)/, async (ctx) => {
     await ctx.deleteMessage(); // Remove the question
     await showStatsPage(ctx, type, 1, false);
 });
+
 
 // Handle pagination actions (Format: stats:type:page)
 adminDashboard.action(/stats:(.+):(\d+)/, async (ctx) => {

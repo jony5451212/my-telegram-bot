@@ -347,17 +347,28 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
         // Extract Date: First 8 digits -> DDMMYYYY
         const datePart = numberInput.substring(0, 8);
-        const day = datePart.substring(0, 2);
-        const month = datePart.substring(2, 4);
-        const year = datePart.substring(4, 8);
+        const day = parseInt(datePart.substring(0, 2), 10);
+        const month = parseInt(datePart.substring(2, 4), 10);
+        const year = parseInt(datePart.substring(4, 8), 10);
 
-        const formattedDate = `${day}.${month}.${year}`;
+        // Date Validation
+        if (month < 1 || month > 12) {
+            return ctx.reply(`❌ Sana xato! Oy ${month} bo'lishi mumkin emas (1-12). Rakamingizni tekshirib qaytadan kiriting.`, navKeyboard);
+        }
+        if (year < 2023) {
+            return ctx.reply(`❌ Sana xato! Yil 2023 dan kichik bo'lishi mumkin emas (${year}). Rakamingizni tekshirib qaytadan kiriting.`, navKeyboard);
+        }
+        if (day < 1 || day > 31) {
+            return ctx.reply(`❌ Sana xato! Kun ${day} bo'lishi mumkin emas.`, navKeyboard);
+        }
+
+        const formattedDate = `${datePart.substring(0, 2)}.${datePart.substring(2, 4)}.${year}`;
         ctx.scene.state.data.sana = formattedDate;
 
         console.log(`Date extracted: ${formattedDate}. Moving to Step 4.`); // DEBUG
 
         // Ask for confirmation
-        await ctx.reply(`Dalolatnoma sanasi: ${formattedDate} kami?\n\nSanani tasdiqlaysizmi?`, Markup.keyboard([
+        await ctx.reply(`Dalolatnoma sanasi: ${formattedDate} da rasmiylashtirilganmi?\n\nSanani tasdiqlaysizmi?`, Markup.keyboard([
             ['✅ Ha', '❌ Yo\'q'],
             ['🏠 Bosh menyu']
         ]).resize());

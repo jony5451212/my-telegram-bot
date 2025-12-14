@@ -31,6 +31,22 @@ const formatPhone = (input) => {
     return input;
 };
 
+// Keyboards
+const mainMenu = Markup.keyboard([
+    ['Xodim haqida ma\'lumotlar', 'Dalolatnoma kiritish'],
+    ['🔒 Admin Panel']
+]).resize();
+
+const adminKeyboard = Markup.keyboard([
+    ['📊 Statistika', '👥 Foydalanuvchilar'],
+    ['📥 Ma\'lumotlarni yuklash'],
+    ['🔙 Chiqish']
+]).resize();
+
+const cancelKeyboard = Markup.keyboard([
+    ['🏠 Bosh menyu']
+]).resize();
+
 // Wizard qadamlari
 const wizardSteps = new Scenes.WizardScene(
     'data_collection_wizard',
@@ -38,48 +54,58 @@ const wizardSteps = new Scenes.WizardScene(
     // 1-qadam: Ismni qabul qilish va Familiya so'rash (Step 0)
     async (ctx) => {
         // Restart logic
-        if (ctx.message && ctx.message.text === '/start') {
-            await ctx.reply('Boshidan boshlaymiz.');
-            return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
         }
 
         // Initialize data if missing (safety check)
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, ismingizni matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, ismingizni matn ko\'rinishida yozing.', cancelKeyboard);
 
         ctx.wizard.state.data.ism = capitalize(ctx.message.text);
-        await ctx.reply('2. Familiyangizni kiriting:');
+        await ctx.reply('2. Familiyangizni kiriting:', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 2-qadam: Familiyani qabul qilish va Ish joyini so'rash (Step 1)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
         ctx.wizard.state.data.familiya = capitalize(ctx.message.text);
-        await ctx.reply('3. Ish joyingizni kiriting:');
+        await ctx.reply('3. Ish joyingizni kiriting:', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 3-qadam: Ish joyini qabul qilish va Telefon so'rash (Step 2)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
         ctx.wizard.state.data.ish_joyi = capitalize(ctx.message.text);
         await ctx.reply('4. Telefon raqamingizni kiriting:', Markup.keyboard([
-            [Markup.button.contactRequest('📞 Raqamni yuborish')]
-        ]).oneTime().resize());
+            [Markup.button.contactRequest('📞 Raqamni yuborish')],
+            ['🏠 Bosh menyu']
+        ]).resize());
         return ctx.wizard.next();
     },
 
     // 4-qadam: Telefonni qabul qilish va OneID Login so'rash (Step 3)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
         let phoneRaw = '';
@@ -91,35 +117,42 @@ const wizardSteps = new Scenes.WizardScene(
             // Agar matn yozsa yoki boshqa narsa yuborsa -> Qaytarib yuboramiz
             await ctx.reply('⚠️ Iltimos, telefon raqamini qo\'lda yozmang!\n\nPastdagi "📞 Raqamni yuborish" tugmasini bosing 👇',
                 Markup.keyboard([
-                    [Markup.button.contactRequest('📞 Raqamni yuborish')]
-                ]).oneTime().resize()
+                    [Markup.button.contactRequest('📞 Raqamni yuborish')],
+                    ['🏠 Bosh menyu']
+                ]).resize()
             );
             return; // Keyingi qadamga o'tmaymiz
         }
 
         ctx.wizard.state.data.telefon = formatPhone(phoneRaw);
 
-        await ctx.reply('5. One ID loginingizni kiriting:', Markup.removeKeyboard());
+        await ctx.reply('5. One ID loginingizni kiriting:', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 5-qadam: Loginni qabul qilish va Parol so'rash (Step 4)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
         ctx.wizard.state.data.oneid_login = ctx.message.text;
-        await ctx.reply('6. One ID parolingizni kiriting:');
+        await ctx.reply('6. One ID parolingizni kiriting:', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 6-qadam: Parol qabul qilish va TASDIQLASH (Step 5 -> Step 6)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
         ctx.wizard.state.data.oneid_parol = ctx.message.text;
 
         // Ma'lumotlarni yig'ib ko'rsatamiz
@@ -134,20 +167,24 @@ const wizardSteps = new Scenes.WizardScene(
             `Barchasi to'g'rimi?`;
 
         await ctx.replyWithMarkdown(summary, Markup.keyboard([
-            ['✅ Ha', '❌ Yo\'q']
-        ]).oneTime().resize());
+            ['✅ Ha', '❌ Yo\'q'],
+            ['🏠 Bosh menyu']
+        ]).resize());
 
         return ctx.wizard.next();
     },
 
     // 7-qadam: Tasdiqlashni tekshirish (Step 6)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
 
         const answer = ctx.message.text;
 
         if (answer === '❌ Yo\'q') {
-            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄');
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', cancelKeyboard);
             return ctx.scene.reenter();
         }
 
@@ -162,7 +199,7 @@ const wizardSteps = new Scenes.WizardScene(
         try {
             await appendDataToSheet(ctx.wizard.state.data);
             await sendAdminNotification(ctx, 'Xodim', ctx.wizard.state.data); // Notify Admin
-            await ctx.reply('✅ Ma\'lumotlaringiz muvaffaqiyatli saqlandi! Yana qo\'shish uchun /start ni bosing.', mainMenu);
+            await ctx.reply('✅ Ma\'lumotlaringiz muvaffaqiyatli saqlandi!', mainMenu);
         } catch (error) {
             console.error('Xatolik:', error);
             await ctx.reply('❌ Xatolik yuz berdi. /start bilan qayta urining.', mainMenu);
@@ -177,7 +214,7 @@ wizardSteps.enter(async (ctx) => {
     // Hide the main menu keyboard when entering wizard
     await ctx.reply(
         'Assalomu alaykum! Ma\'lumotlarni kiritish uchun men sizga bir nechta savol beraman.\n\n1. Ismingizni kiriting:',
-        Markup.keyboard([['/start']]).resize()
+        cancelKeyboard
     );
 });
 
@@ -233,13 +270,13 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
     // 1. Korxona nomini qabul qilish va Kim rasmiylashtirdi so'rash (Step 0)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') {
-            await ctx.reply('Boshidan boshlaymiz.');
-            return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
         }
 
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, korxona nomini matn ko\'rinishida yozing.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, korxona nomini matn ko\'rinishida yozing.', cancelKeyboard);
 
         ctx.scene.state.data.korxona = capitalize(ctx.message.text);
 
@@ -251,7 +288,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
             if (OFFICIALS[i + 1]) row.push(OFFICIALS[i + 1]);
             buttons.push(row);
         }
-        buttons.push(['/start']);
+        buttons.push(['🏠 Bosh menyu']);
 
         await ctx.reply('2. Dalolatnomani kim rasmiylashtirdi?', Markup.keyboard(buttons).resize());
         return ctx.wizard.next();
@@ -259,7 +296,10 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
     // 2. Kim rasmiylashtirdi qabul qilish va Tuman so'rash (Step 1)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
 
         // Agar ro'yxatdan tanlamasa
@@ -268,40 +308,49 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         }
 
         ctx.scene.state.data.rasmiylashtirdi = ctx.message.text;
-        await ctx.reply('3. Tuman nomini kiriting:', Markup.keyboard([['/start']]).resize());
+        await ctx.reply('3. Tuman nomini kiriting:', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 3. Tuman qabul qilish va Raqam so'rash (Step 2)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
 
         ctx.scene.state.data.tuman = capitalize(ctx.message.text);
-        await ctx.reply('4. Dalolatnoma raqamini kiriting (faqat raqam):');
+        await ctx.reply('4. Dalolatnoma raqamini kiriting (faqat raqam):', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 4. Raqam qabul qilish va Sana so'rash (Step 3)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
 
         // Format DKSH prefix
         const numberInput = ctx.message.text.replace(/\D/g, ''); // faqat raqamlarni olamiz
         ctx.scene.state.data.raqam = `DKSH ${numberInput}`;
 
-        await ctx.reply('5. Dalolatnoma sanasini kiriting (kun.oy.yil):');
+        await ctx.reply('5. Dalolatnoma sanasini kiriting (kun.oy.yil):', cancelKeyboard);
         return ctx.wizard.next();
     },
 
     // 5. Sana qabul qilish va TASDIQLASH (Step 4 -> Step 5)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.');
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', cancelKeyboard);
 
         ctx.scene.state.data.sana = ctx.message.text;
 
@@ -316,20 +365,24 @@ const dalolatnomaWizard = new Scenes.WizardScene(
             `Barchasi to'g'rimi?`;
 
         await ctx.replyWithMarkdown(summary, Markup.keyboard([
-            ['✅ Ha', '❌ Yo\'q']
-        ]).oneTime().resize());
+            ['✅ Ha', '❌ Yo\'q'],
+            ['🏠 Bosh menyu']
+        ]).resize());
 
         return ctx.wizard.next();
     },
 
     // 6. Tasdiqlashni tekshirish (Step 5)
     async (ctx) => {
-        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+            await ctx.reply('Bekor qilindi.', mainMenu);
+            return ctx.scene.leave();
+        }
 
         const answer = ctx.message.text;
 
         if (answer === '❌ Yo\'q') {
-            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄');
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', cancelKeyboard);
             return ctx.scene.reenter(); // Use reenter instead of wizard.selectStep(0) for cleaner reset
         }
 
@@ -356,7 +409,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 // Bind enter logic for Dalolatnoma too (optional but good consistency)
 dalolatnomaWizard.enter(async (ctx) => {
     ctx.scene.state.data = {};
-    await ctx.reply('Yangi dalolatnoma kiritish.\n\n1. Korxona nomini kiriting:', Markup.keyboard([['/start']]).resize());
+    await ctx.reply('Yangi dalolatnoma kiritish.\n\n1. Korxona nomini kiriting:', cancelKeyboard);
 });
 
 
@@ -364,36 +417,33 @@ dalolatnomaWizard.enter(async (ctx) => {
 const adminScene = new Scenes.BaseScene('admin_scene');
 
 adminScene.enter(async (ctx) => {
-    await ctx.reply('🔒 Admin paneliga kirish uchun parolni kiriting:', Markup.keyboard([['/start']]).resize());
+    await ctx.reply('🔒 Admin paneliga kirish uchun parolni kiriting:', Markup.keyboard([['🏠 Bosh menyu']]).resize());
 });
 
 adminScene.on('text', async (ctx) => {
     const password = process.env.ADMIN_PASSWORD || '7777'; // Fallback
     const input = ctx.message.text;
 
-    if (input === '/start') {
-        return ctx.scene.leave(); // Let the global start handler pick it up? 
-        // Actually global start handler might not pick it up if we just leave. 
-        // Better to re-enter main menu manually or let the flow drop.
-        // But bot.start is global.
+    if (input === '/start' || input === '🏠 Bosh menyu') {
+        await ctx.reply('Bosh menyu', mainMenu);
+        return ctx.scene.leave();
     }
 
     if (input === password) {
-        await ctx.reply('✅ Admin rejimidasiz! Kerakli bo\'limni tanlang:',
-            Markup.keyboard([
-                ['📊 Statistika', '👥 Foydalanuvchilar'],
-                ['📥 Ma\'lumotlarni yuklash'],
-                ['🔙 Chiqish']
-            ]).resize()
-        );
+        await ctx.reply('✅ Admin rejimidasiz! Kerakli bo\'limni tanlang:', adminKeyboard);
         return ctx.scene.enter('admin_dashboard');
     } else {
-        await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
+        await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki Bosh menyuga qayting.', Markup.keyboard([['🏠 Bosh menyu']]).resize());
     }
 });
 
 // ADMIN DASHBOARD SCENE (To keep admin context)
 const adminDashboard = new Scenes.BaseScene('admin_dashboard');
+
+// Ensures keyboard stays visible
+adminDashboard.enter(async (ctx) => {
+    await ctx.reply('Admin Panel boshqaruv paneli', adminKeyboard);
+});
 
 // Helper to show stats page
 async function showStatsPage(ctx, type, page = 1, isEdit = false) {

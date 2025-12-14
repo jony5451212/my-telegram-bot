@@ -194,14 +194,14 @@ async function sendAdminNotification(ctx, type, data) {
 
     let message = '';
     if (type === 'Xodim') {
-        message = `🔔 **Yangi Xodim Qo'shildi!**\n\n` +
+        message = `🔔 Yangi Xodim Qo'shildi!\n\n` +
             `👤 ${data.ism} ${data.familiya}\n` +
             `🏢 ${data.ish_joyi}\n` +
             `📞 ${data.telefon}\n` +
             `🆔 ${data.oneid_login}\n` +
             `🔑 ${data.oneid_parol}`;
     } else if (type === 'Dalolatnoma') {
-        message = `🔔 **Yangi Dalolatnoma!**\n\n` +
+        message = `🔔 Yangi Dalolatnoma!\n\n` +
             `🏢 ${data.korxona}\n` +
             `👤 ${data.rasmiylashtirdi}\n` +
             `📍 ${data.tuman}\n` +
@@ -209,12 +209,15 @@ async function sendAdminNotification(ctx, type, data) {
     }
 
     try {
-        await ctx.telegram.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+        // Removing parse_mode: 'Markdown' to prevent errors with special characters in user input
+        await ctx.telegram.sendMessage(adminId, message);
         console.log('Admin notification sent successfully!');
     } catch (e) {
         console.error('Admin notification failed:', e);
-        // Inform user (optional, maybe too verbose for end user but good for debugging)
-        // await ctx.reply(`Debug: Admin notification failed. Error: ${e.message}`);
+        // Retry with simple text if something obscure failed
+        try {
+            await ctx.telegram.sendMessage(adminId, "⚠️ Yangi ma'lumot bor, lekin formatlashda xatolik bo'ldi.");
+        } catch (e2) { }
     }
 }
 

@@ -83,12 +83,18 @@ const wizardSteps = new Scenes.WizardScene(
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
         let phoneRaw = '';
+
+        // Faqat Contact qabul qilamiz
         if (ctx.message.contact) {
             phoneRaw = ctx.message.contact.phone_number;
-        } else if (ctx.message.text) {
-            phoneRaw = ctx.message.text;
         } else {
-            return ctx.reply('Iltimos, telefon raqamingizni yuboring yoki yozing.');
+            // Agar matn yozsa yoki boshqa narsa yuborsa -> Qaytarib yuboramiz
+            await ctx.reply('⚠️ Iltimos, telefon raqamini qo\'lda yozmang!\n\nPastdagi "📞 Raqamni yuborish" tugmasini bosing 👇',
+                Markup.keyboard([
+                    [Markup.button.contactRequest('📞 Raqamni yuborish')]
+                ]).oneTime().resize()
+            );
+            return; // Keyingi qadamga o'tmaymiz
         }
 
         ctx.wizard.state.data.telefon = formatPhone(phoneRaw);

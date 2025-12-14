@@ -440,6 +440,13 @@ bot.hears('🔒 Admin Panel', async (ctx) => {
     await ctx.scene.enter('admin_scene');
 });
 
+// Catch-all for unhandled messages (prevents "freezing" feeling)
+bot.on('message', async (ctx) => {
+    // If not in a scene and no other handler matched
+    // We suggest /start to reset
+    await ctx.reply('⚠️ Tushunmadim. Agar jarayon to\'xtab qolgan bo\'lsa, iltimos /start ni bosing.');
+});
+
 const PORT = process.env.PORT || 3000;
 const URL = process.env.RENDER_EXTERNAL_URL; // Render automatically sets this
 

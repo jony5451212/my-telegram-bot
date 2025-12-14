@@ -185,7 +185,12 @@ const OFFICIALS = [
 // Admin Notification Helper
 async function sendAdminNotification(ctx, type, data) {
     const adminId = process.env.ADMIN_CHAT_ID;
-    if (!adminId) return; // Silent fail if no admin configured
+    console.log('Attempting to notify admin. ID:', adminId); // DEBUG
+
+    if (!adminId) {
+        console.error('Admin ID is missing in .env!');
+        return;
+    }
 
     let message = '';
     if (type === 'Xodim') {
@@ -205,8 +210,11 @@ async function sendAdminNotification(ctx, type, data) {
 
     try {
         await ctx.telegram.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+        console.log('Admin notification sent successfully!');
     } catch (e) {
         console.error('Admin notification failed:', e);
+        // Inform user (optional, maybe too verbose for end user but good for debugging)
+        // await ctx.reply(`Debug: Admin notification failed. Error: ${e.message}`);
     }
 }
 

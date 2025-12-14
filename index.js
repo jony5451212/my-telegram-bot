@@ -327,6 +327,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
     // 4. Raqam qabul qilish va Sana aniqlash (Step 3)
     async (ctx) => {
+        console.log('STEP 3: Raqam qabul qilish'); // DEBUG
         if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
             await ctx.reply('Jarayon bekor qilindi.', mainMenu);
             return ctx.scene.leave();
@@ -353,6 +354,8 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         const formattedDate = `${day}.${month}.${year}`;
         ctx.scene.state.data.sana = formattedDate;
 
+        console.log(`Date extracted: ${formattedDate}. Moving to Step 4.`); // DEBUG
+
         // Ask for confirmation
         await ctx.reply(`Dalolatnoma sanasi: ${formattedDate} kami?\n\nSanani tasdiqlaysizmi?`, Markup.keyboard([
             ['✅ Ha', '❌ Yo\'q'],
@@ -364,43 +367,54 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
     // 5. Sanani tasdiqlash yoki Qo'lda kiritish (Step 4 -> Step 5)
     async (ctx) => {
-        if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
-            await ctx.reply('Jarayon bekor qilindi.', mainMenu);
-            return ctx.scene.leave();
-        }
-        if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        const text = ctx.message.text;
+        console.log('STEP 4: Sanani tasdiqlash'); // DEBUG
+        try {
+            if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
+                await ctx.reply('Jarayon bekor qilindi.', mainMenu);
+                return ctx.scene.leave();
+            }
+            if (!ctx.scene.state.data) ctx.scene.state.data = {};
+            const text = ctx.message.text;
+            console.log(`Input at Step 4: ${text}`); // DEBUG
 
-        // Agar "Ha" desa -> Summaryga o'tamiz
-        if (text === '✅ Ha') {
-            // Sana allaqachon state da bor
-        }
-        // Agar "Yo'q" desa -> Qo'lda kiritishni so'raymiz
-        else if (text === '❌ Yo\'q') {
-            await ctx.reply('Unda sanani qo\'lda kiriting (kun.oy.yil):', Markup.keyboard([['🏠 Bosh menyu']]).resize());
-            return; // Stay in this step
-        }
-        // Agar boshqa matn yozsa (Sana deb hisoblaymiz)
-        else {
-            ctx.scene.state.data.sana = text;
-        }
+            // Agar "Ha" desa -> Summaryga o'tamiz (Relaxed check)
+            if (text.includes('Ha') || text === '✅ Ha') {
+                // Sana allaqachon state da bor
+                console.log('Date confirmed.');
+            }
+            // Agar "Yo'q" desa -> Qo'lda kiritishni so'raymiz
+            else if (text.includes('Yo\'q') || text === '❌ Yo\'q') {
+                console.log('Date rejected. Asking manual input.');
+                await ctx.reply('Unda sanani qo\'lda kiriting (kun.oy.yil):', Markup.keyboard([['🏠 Bosh menyu']]).resize());
+                return; // Stay in this step to receive manual date
+            }
+            // Agar boshqa matn yozsa (Sana deb hisoblaymiz)
+            else {
+                console.log('Manual date entered:', text);
+                ctx.scene.state.data.sana = text;
+            }
 
-        // Summary generation
-        const d = ctx.scene.state.data;
-        const summary = `📋 **Dalolatnomani tekshiring:**\n\n` +
-            `🏢 **Korxona:** ${d.korxona}\n` +
-            `👤 **Rasmiylashtirdi:** ${d.rasmiylashtirdi}\n` +
-            `📍 **Tuman:** ${d.tuman}\n` +
-            `🔢 **Raqam:** ${d.raqam}\n` +
-            `📅 **Sana:** ${d.sana}\n\n` +
-            `Barchasi to'g'rimi?`;
+            // Summary generation
+            const d = ctx.scene.state.data;
+            const summary = `📋 **Dalolatnomani tekshiring:**\n\n` +
+                `🏢 **Korxona:** ${d.korxona}\n` +
+                `👤 **Rasmiylashtirdi:** ${d.rasmiylashtirdi}\n` +
+                `📍 **Tuman:** ${d.tuman}\n` +
+                `🔢 **Raqam:** ${d.raqam}\n` +
+                `📅 **Sana:** ${d.sana}\n\n` +
+                `Barchasi to'g'rimi?`;
 
-        await ctx.replyWithMarkdown(summary, Markup.keyboard([
-            ['✅ Ha', '❌ Yo\'q'],
-            ['🏠 Bosh menyu']
-        ]).resize());
+            await ctx.replyWithMarkdown(summary, Markup.keyboard([
+                ['✅ Ha', '❌ Yo\'q'],
+                ['🏠 Bosh menyu']
+            ]).resize());
 
-        return ctx.wizard.next();
+            return ctx.wizard.next();
+
+        } catch (err) {
+            console.error('Error in Step 4:', err);
+            await ctx.reply('Texnik xatolik (Step 4): ' + err.message);
+        }
     },
 
     // 6. Tasdiqlashni tekshirish (Step 5)

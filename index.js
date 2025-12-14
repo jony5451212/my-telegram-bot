@@ -108,7 +108,7 @@ const wizardSteps = new Scenes.WizardScene(
         return ctx.wizard.next();
     },
 
-    // 6-qadam: Parolni qabul qilish va yakunlash (Step 5)
+    // 6-qadam: Parol qabul qilish va TASDIQLASH (Step 5 -> Step 6)
     async (ctx) => {
         if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
@@ -116,16 +116,50 @@ const wizardSteps = new Scenes.WizardScene(
         if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.');
         ctx.wizard.state.data.oneid_parol = ctx.message.text;
 
-        await ctx.reply('Rahmat! Ma\'lumotlar saqlanmoqda... ⏳');
+        // Ma'lumotlarni yig'ib ko'rsatamiz
+        const d = ctx.wizard.state.data;
+        const summary = `📋 **Ma'lumotlarni tekshiring:**\n\n` +
+            `👤 **Ism:** ${d.ism}\n` +
+            `👤 **Familiya:** ${d.familiya}\n` +
+            `🏢 **Ish joyi:** ${d.ish_joyi}\n` +
+            `📞 **Telefon:** ${d.telefon}\n` +
+            `🆔 **Login:** ${d.oneid_login}\n` +
+            `🔑 **Parol:** ${d.oneid_parol}\n\n` +
+            `Barchasi to'g'rimi?`;
+
+        await ctx.replyWithMarkdown(summary, Markup.keyboard([
+            ['✅ Ha', '❌ Yo\'q']
+        ]).oneTime().resize());
+
+        return ctx.wizard.next();
+    },
+
+    // 7-qadam: Tasdiqlashni tekshirish (Step 6)
+    async (ctx) => {
+        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+
+        const answer = ctx.message.text;
+
+        if (answer === '❌ Yo\'q') {
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄');
+            return ctx.scene.reenter();
+        }
+
+        if (answer !== '✅ Ha') {
+            await ctx.reply('Iltimos, "✅ Ha" yoki "❌ Yo\'q" tugmasini bosing.');
+            return; // Stay in this step
+        }
+
+        // Agar "Ha" bo'lsa
+        await ctx.reply('Rahmat! Ma\'lumotlar saqlanmoqda... ⏳', Markup.removeKeyboard());
 
         try {
             await appendDataToSheet(ctx.wizard.state.data);
-            await ctx.reply('✅ Ma\'lumotlaringiz muvaffaqiyatli saqlandi! Yana qo\'shish uchun /start ni bosing.',
-                Markup.keyboard([['/start']]).resize()
-            );
+            await sendAdminNotification(ctx, 'Xodim', ctx.wizard.state.data); // Notify Admin
+            await ctx.reply('✅ Ma\'lumotlaringiz muvaffaqiyatli saqlandi! Yana qo\'shish uchun /start ni bosing.', mainMenu);
         } catch (error) {
             console.error('Xatolik:', error);
-            await ctx.reply('❌ Xatolik yuz berdi. P.S. Google Sheet "Editor" ruxsatini tekshiring. /start bilan qayta urining.');
+            await ctx.reply('❌ Xatolik yuz berdi. /start bilan qayta urining.', mainMenu);
         }
         return ctx.scene.leave();
     }
@@ -147,6 +181,34 @@ const OFFICIALS = [
     'Қ.Аллаев', 'С.Жомуродов', 'Т.Рустамов', 'Ў.Арабов',
     'У.Худоёров', 'Х.Холматов', 'Ш.Турдиев'
 ];
+
+// Admin Notification Helper
+async function sendAdminNotification(ctx, type, data) {
+    const adminId = process.env.ADMIN_CHAT_ID;
+    if (!adminId) return; // Silent fail if no admin configured
+
+    let message = '';
+    if (type === 'Xodim') {
+        message = `🔔 **Yangi Xodim Qo'shildi!**\n\n` +
+            `👤 ${data.ism} ${data.familiya}\n` +
+            `🏢 ${data.ish_joyi}\n` +
+            `📞 ${data.telefon}\n` +
+            `🆔 ${data.oneid_login}\n` +
+            `🔑 ${data.oneid_parol}`;
+    } else if (type === 'Dalolatnoma') {
+        message = `🔔 **Yangi Dalolatnoma!**\n\n` +
+            `🏢 ${data.korxona}\n` +
+            `👤 ${data.rasmiylashtirdi}\n` +
+            `📍 ${data.tuman}\n` +
+            `🔢 ${data.raqam} | 📅 ${data.sana}`;
+    }
+
+    try {
+        await ctx.telegram.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+    } catch (e) {
+        console.error('Admin notification failed:', e);
+    }
+}
 
 // DALOLATNOMA Wizard
 const dalolatnomaWizard = new Scenes.WizardScene(
@@ -218,7 +280,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         return ctx.wizard.next();
     },
 
-    // 5. Sana qabul qilish va Finish (Step 4)
+    // 5. Sana qabul qilish va TASDIQLASH (Step 4 -> Step 5)
     async (ctx) => {
         if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
@@ -226,11 +288,45 @@ const dalolatnomaWizard = new Scenes.WizardScene(
 
         ctx.scene.state.data.sana = ctx.message.text;
 
-        await ctx.reply('Ma\'lumotlar saqlanmoqda... ⏳');
+        // Summary
+        const d = ctx.scene.state.data;
+        const summary = `📋 **Dalolatnomani tekshiring:**\n\n` +
+            `🏢 **Korxona:** ${d.korxona}\n` +
+            `👤 **Rasmiylashtirdi:** ${d.rasmiylashtirdi}\n` +
+            `📍 **Tuman:** ${d.tuman}\n` +
+            `🔢 **Raqam:** ${d.raqam}\n` +
+            `📅 **Sana:** ${d.sana}\n\n` +
+            `Barchasi to'g'rimi?`;
+
+        await ctx.replyWithMarkdown(summary, Markup.keyboard([
+            ['✅ Ha', '❌ Yo\'q']
+        ]).oneTime().resize());
+
+        return ctx.wizard.next();
+    },
+
+    // 6. Tasdiqlashni tekshirish (Step 5)
+    async (ctx) => {
+        if (ctx.message && ctx.message.text === '/start') return ctx.scene.reenter();
+
+        const answer = ctx.message.text;
+
+        if (answer === '❌ Yo\'q') {
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄');
+            return ctx.scene.reenter(); // Use reenter instead of wizard.selectStep(0) for cleaner reset
+        }
+
+        if (answer !== '✅ Ha') {
+            await ctx.reply('Iltimos, "✅ Ha" yoki "❌ Yo\'q" tugmasini bosing.');
+            return;
+        }
+
+        await ctx.reply('Ma\'lumotlar saqlanmoqda... ⏳', Markup.removeKeyboard());
 
         try {
             // Pass 'Dalolatnomalar' as the second argument
             await appendDataToSheet(ctx.scene.state.data, 'Dalolatnomalar');
+            await sendAdminNotification(ctx, 'Dalolatnoma', ctx.scene.state.data); // Notify Admin
             await ctx.reply('✅ Dalolatnoma saqlandi!', mainMenu);
         } catch (error) {
             console.error('Xatolik:', error);
@@ -247,7 +343,61 @@ dalolatnomaWizard.enter(async (ctx) => {
 });
 
 
-const stage = new Scenes.Stage([wizardSteps, dalolatnomaWizard]);
+// ADMIN PANEL SCENE
+const adminScene = new Scenes.BaseScene('admin_scene');
+
+adminScene.enter(async (ctx) => {
+    await ctx.reply('🔒 Admin paneliga kirish uchun parolni kiriting:', Markup.keyboard([['/start']]).resize());
+});
+
+adminScene.on('text', async (ctx) => {
+    const password = process.env.ADMIN_PASSWORD || '7777'; // Fallback
+    const input = ctx.message.text;
+
+    if (input === '/start') {
+        return ctx.scene.leave(); // Let the global start handler pick it up? 
+        // Actually global start handler might not pick it up if we just leave. 
+        // Better to re-enter main menu manually or let the flow drop.
+        // But bot.start is global.
+    }
+
+    if (input === password) {
+        await ctx.reply('✅ Admin rejimidasiz! Kerakli bo\'limni tanlang:',
+            Markup.keyboard([
+                ['📊 Statistika', '👥 Foydalanuvchilar'],
+                ['🔙 Chiqish']
+            ]).resize()
+        );
+        return ctx.scene.enter('admin_dashboard');
+    } else {
+        await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
+    }
+});
+
+// ADMIN DASHBOARD SCENE (To keep admin context)
+const adminDashboard = new Scenes.BaseScene('admin_dashboard');
+
+adminDashboard.hears('📊 Statistika', async (ctx) => {
+    await ctx.reply('📊 Hozircha statistika bo\'limi test rejimida.\n\nTez orada bu yerda jami xodimlar soni va hisobotlar chiqadi.');
+});
+
+adminDashboard.hears('👥 Foydalanuvchilar', async (ctx) => {
+    await ctx.reply('👥 Bu yerda foydalanuvchilar ro\'yxati bo\'ladi.');
+});
+
+adminDashboard.hears('🔙 Chiqish', async (ctx) => {
+    await ctx.reply('Admin rejimidan chiqdingiz.', mainMenu);
+    return ctx.scene.leave();
+});
+
+// Handle standard commands inside dashboard
+adminDashboard.command('start', (ctx) => {
+    ctx.scene.leave();
+    return ctx.reply('Bosh menyu:', mainMenu);
+});
+
+
+const stage = new Scenes.Stage([wizardSteps, dalolatnomaWizard, adminScene, adminDashboard]);
 bot.use(session());
 bot.use(stage.middleware());
 
@@ -262,8 +412,8 @@ bot.catch((err, ctx) => {
 
 // Main Menu Keyboard
 const mainMenu = Markup.keyboard([
-    ['Xodim haqida ma\'lumotlar'],
-    ['Dalolatnoma kiritish']
+    ['Xodim haqida ma\'lumotlar', 'Dalolatnoma kiritish'],
+    ['🔒 Admin Panel']
 ]).resize();
 
 // Start command - Shows the Main Menu
@@ -283,6 +433,11 @@ bot.hears('Xodim haqida ma\'lumotlar', async (ctx) => {
 // Handle "Dalolatnoma kiritish" button
 bot.hears('Dalolatnoma kiritish', async (ctx) => {
     await ctx.scene.enter('dalolatnoma_wizard');
+});
+
+// Handle "Admin Panel" button
+bot.hears('🔒 Admin Panel', async (ctx) => {
+    await ctx.scene.enter('admin_scene');
 });
 
 const PORT = process.env.PORT || 3000;

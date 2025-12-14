@@ -646,7 +646,7 @@ bot.catch((err, ctx) => {
     console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
     // Try to reply if possible
     try {
-        ctx.reply("Texnik xatolik. /start ni bosing.");
+        ctx.reply(`Texnik xatolik: ${err.message}\n/start ni bosing.`);
     } catch (e) { }
 });
 

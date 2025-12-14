@@ -395,12 +395,15 @@ adminScene.on('text', async (ctx) => {
 const adminDashboard = new Scenes.BaseScene('admin_dashboard');
 
 // Helper to show stats page
-async function showStatsPage(ctx, page = 1, isEdit = false) {
+async function showStatsPage(ctx, type, page = 1, isEdit = false) {
     const { getRows } = require('./sheets');
-    const rows = await getRows('Malumot1');
+
+    // Choose sheet name based on type
+    const sheetName = type === 'dalolatnoma' ? 'Dalolatnomalar' : 'Malumot1';
+    const rows = await getRows(sheetName);
 
     if (!rows || rows.length <= 1) {
-        const text = '📭 Hozircha ro\'yxatdan o\'tganlar yo\'q.';
+        const text = '📭 Hozircha ma\'lumot yo\'q.';
         if (isEdit) return ctx.editMessageText(text);
         return ctx.reply(text);
     }
@@ -419,51 +422,94 @@ async function showStatsPage(ctx, page = 1, isEdit = false) {
     const end = start + ITEMS_PER_PAGE;
     const pageItems = dataRows.slice(start, end);
 
-    let msg = `📊 **Jami ro'yxatdan o'tganlar:** ${totalItems} ta\n`;
-    msg += `📄 **Sahifa:** ${page} / ${totalPages}\n\n`;
-    msg += `📱 **Telefon raqamlar:**\n`;
-
-    pageItems.forEach((row, index) => {
-        const globalIndex = start + index + 1;
-        const name = row[0] || '-';
-        const surname = row[1] || '';
-        const phone = row[3] || 'Yo\'q';
-        msg += `${globalIndex}. ${name} ${surname} — ${phone}\n`;
-    });
+    let msg = '';
+    if (type === 'dalolatnoma') {
+        msg = `📊 **Jami Dalolatnomalar:** ${totalItems} ta\n`;
+        msg += `📄 **Sahifa:** ${page} / ${totalPages}\n\n`;
+        // Dalolatnoma formati: 0=Korxona, 1=Rasmiylashtirdi, 2=Tuman, 3=Raqam, 4=Sana
+        pageItems.forEach((row, index) => {
+            const globalIndex = start + index + 1;
+            const korxona = row[0] || '-';
+            const raqam = row[3] || '-';
+            const sana = row[4] || '-';
+            msg += `${globalIndex}. 🏢 ${korxona} | № ${raqam} (${sana})\n`;
+        });
+    } else {
+        msg = `📊 **Jami Xodimlar:** ${totalItems} ta\n`;
+        msg += `📄 **Sahifa:** ${page} / ${totalPages}\n\n`;
+        msg += `📱 **Telefon raqamlar:**\n`;
+        // Xodim formati: 0=Ism, 1=Familiya, 3=Telefon
+        pageItems.forEach((row, index) => {
+            const globalIndex = start + index + 1;
+            const name = row[0] || '-';
+            const surname = row[1] || '';
+            const phone = row[3] || 'Yo\'q';
+            msg += `${globalIndex}. ${name} ${surname} — ${phone}\n`;
+        });
+    }
 
     // Buttons
     const buttons = [];
     const navigationRow = [];
 
     if (page > 1) {
-        navigationRow.push(Markup.button.callback('⬅️ Oldingi', `stats:${page - 1}`));
+        navigationRow.push(Markup.button.callback('⬅️ Oldingi', `stats:${type}:${page - 1}`));
     }
     if (page < totalPages) {
-        navigationRow.push(Markup.button.callback('Keyingi ➡️', `stats:${page + 1}`));
+        navigationRow.push(Markup.button.callback('Keyingi ➡️', `stats:${type}:${page + 1}`));
     }
 
     if (navigationRow.length > 0) buttons.push(navigationRow);
     // Add "Update" button to refresh data
-    buttons.push([Markup.button.callback('🔄 Yangilash', `stats:${page}`)]);
+    buttons.push([Markup.button.callback('🔄 Yangilash', `stats:${type}:${page}`)]);
 
     const keyboard = Markup.inlineKeyboard(buttons);
 
-    if (isEdit) {
-        await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...keyboard });
-    } else {
-        await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
+    // Escape special characters in msg to prevent Markdown errors (basic approach)
+    // Or just use 'Markdown' carefully. The previous issue was likely user input having `_` etc.
+    // For stats, we control the format, but User Input (Name/Korxona) might have chars.
+    // Safest is to remove markdown formatting for variable content or use simple text.
+    // Let's try sending without parse_mode for content safety or just simple checks.
+    // Actually, let's allow Markdown but be careful. Or better, REMOVE parse_mode for the list part to be safe?
+    // User requested "Beautiful", so Markdown is good. Let's wrap unsafe content?
+    // Quick Fix: Just use plain text for the user content inside the formatted string? Impossible in one msg.
+    // Let's rely on robustness. If it fails, we fall back.
+
+    try {
+        if (isEdit) {
+            await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...keyboard });
+        } else {
+            await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
+        }
+    } catch (e) {
+        // Fallback if Markdown fails (e.g. name has underscore)
+        const plainMsg = msg.replace(/\*\*/g, '').replace(/`/g, '');
+        if (isEdit) await ctx.editMessageText(plainMsg, keyboard);
+        else await ctx.reply(plainMsg, keyboard);
     }
 }
 
 adminDashboard.hears('📊 Statistika', async (ctx) => {
-    await ctx.reply('⏳ Ma\'lumotlar yuklanmoqda...');
-    await showStatsPage(ctx, 1, false);
+    // Ask which stats
+    await ctx.reply('Qaysi ma\'lumotlarni ko\'rmoqchisiz?', Markup.inlineKeyboard([
+        [Markup.button.callback('👤 Xodimlar', 'stats_type:xodim')],
+        [Markup.button.callback('📝 Dalolatnomalar', 'stats_type:dalolatnoma')]
+    ]));
 });
 
-// Handle pagination actions
-adminDashboard.action(/stats:(\d+)/, async (ctx) => {
-    const page = parseInt(ctx.match[1]);
-    await showStatsPage(ctx, page, true);
+// Handle type selection
+adminDashboard.action(/stats_type:(.+)/, async (ctx) => {
+    const type = ctx.match[1];
+    await ctx.answerCbQuery();
+    await ctx.deleteMessage(); // Remove the question
+    await showStatsPage(ctx, type, 1, false);
+});
+
+// Handle pagination actions (Format: stats:type:page)
+adminDashboard.action(/stats:(.+):(\d+)/, async (ctx) => {
+    const type = ctx.match[1];
+    const page = parseInt(ctx.match[2]);
+    await showStatsPage(ctx, type, page, true);
     await ctx.answerCbQuery();
 });
 

@@ -43,9 +43,10 @@ const adminKeyboard = Markup.keyboard([
     ['🔙 Chiqish']
 ]).resize();
 
-const cancelKeyboard = Markup.keyboard([
+// Navigation keyboard for wizards
+const navKeyboard = Markup.keyboard([
     ['🏠 Bosh menyu']
-]).resize();
+]).resize(); // oneTime removed to keep it visible
 
 // Wizard qadamlari
 const wizardSteps = new Scenes.WizardScene(
@@ -59,13 +60,11 @@ const wizardSteps = new Scenes.WizardScene(
             return ctx.scene.leave();
         }
 
-        // Initialize data if missing (safety check)
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
-
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, ismingizni matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, ismingizni matn ko\'rinishida yozing.', navKeyboard);
 
         ctx.wizard.state.data.ism = capitalize(ctx.message.text);
-        await ctx.reply('2. Familiyangizni kiriting:', cancelKeyboard);
+        await ctx.reply('2. Familiyangizni kiriting:', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -77,9 +76,9 @@ const wizardSteps = new Scenes.WizardScene(
         }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', navKeyboard);
         ctx.wizard.state.data.familiya = capitalize(ctx.message.text);
-        await ctx.reply('3. Ish joyingizni kiriting:', cancelKeyboard);
+        await ctx.reply('3. Ish joyingizni kiriting:', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -91,12 +90,13 @@ const wizardSteps = new Scenes.WizardScene(
         }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', navKeyboard);
         ctx.wizard.state.data.ish_joyi = capitalize(ctx.message.text);
+
         await ctx.reply('4. Telefon raqamingizni kiriting:', Markup.keyboard([
             [Markup.button.contactRequest('📞 Raqamni yuborish')],
             ['🏠 Bosh menyu']
-        ]).resize());
+        ]).resize()); // Keep resize, remove oneTime
         return ctx.wizard.next();
     },
 
@@ -138,9 +138,9 @@ const wizardSteps = new Scenes.WizardScene(
         }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', navKeyboard);
         ctx.wizard.state.data.oneid_login = ctx.message.text;
-        await ctx.reply('6. One ID parolingizni kiriting:', cancelKeyboard);
+        await ctx.reply('6. One ID parolingizni kiriting:', navKeyboard);
         return ctx.wizard.next();
     },
 
@@ -152,7 +152,7 @@ const wizardSteps = new Scenes.WizardScene(
         }
         if (!ctx.wizard.state.data) ctx.wizard.state.data = {};
 
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', cancelKeyboard);
+        if (!ctx.message || !ctx.message.text) return ctx.reply('Iltimos, matn ko\'rinishida yozing.', navKeyboard);
         ctx.wizard.state.data.oneid_parol = ctx.message.text;
 
         // Ma'lumotlarni yig'ib ko'rsatamiz
@@ -184,7 +184,7 @@ const wizardSteps = new Scenes.WizardScene(
         const answer = ctx.message.text;
 
         if (answer === '❌ Yo\'q') {
-            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', cancelKeyboard);
+            await ctx.reply('Tushunarli. Boshqatdan boshlaymiz. 🔄', navKeyboard); // Use navKeyboard here
             return ctx.scene.reenter();
         }
 
@@ -208,13 +208,12 @@ const wizardSteps = new Scenes.WizardScene(
     }
 );
 
-// Scene Entry Handler - Runs immediately when entering the scene
+// Scene Entry Handler
 wizardSteps.enter(async (ctx) => {
-    ctx.scene.state.data = {}; // Initialize state using ctx.scene.state, safe for entry
-    // Hide the main menu keyboard when entering wizard
+    ctx.scene.state.data = {};
     await ctx.reply(
         'Assalomu alaykum! Ma\'lumotlarni kiritish uchun men sizga bir nechta savol beraman.\n\n1. Ismingizni kiriting:',
-        cancelKeyboard
+        navKeyboard // Use global navKeyboard
     );
 });
 

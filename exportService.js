@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const XLSX = require('xlsx-js-style'); // Switched to library with Style support
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -8,13 +8,31 @@ const os = require('os'); // Add os module
 // Excel generatsiya qilish
 function generateExcel(data, sheetName) {
     const wb = XLSX.utils.book_new();
+
+    // Create sheet from data
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // Auto-width columns (simple estimation)
-    if (data.length > 0) { // Safety check
+    // Styling logic
+    // Header Row Style (First Row)
+    const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "4F81BD" } }, // Blue header
+        alignment: { horizontal: "center" }
+    };
+
+    // Apply style to first row (A1, B1, ...)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+        const address = XLSX.utils.encode_cell({ r: 0, c: C }); // Row 0
+        if (!ws[address]) continue;
+        ws[address].s = headerStyle;
+    }
+
+    // Auto-width columns
+    if (data.length > 0) {
         const colWidths = data[0].map((_, i) => {
             const maxLen = data.reduce((max, row) => Math.max(max, (row[i] || '').toString().length), 10);
-            return { wch: maxLen + 2 };
+            return { wch: maxLen + 5 };
         });
         ws['!cols'] = colWidths;
     }
@@ -22,7 +40,7 @@ function generateExcel(data, sheetName) {
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
     const filename = `${sheetName}_${Date.now()}.xlsx`;
-    const filePath = path.join(os.tmpdir(), filename); // Use temp dir
+    const filePath = path.join(os.tmpdir(), filename);
 
     XLSX.writeFile(wb, filePath);
     return filePath;

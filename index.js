@@ -395,7 +395,44 @@ adminScene.on('text', async (ctx) => {
 const adminDashboard = new Scenes.BaseScene('admin_dashboard');
 
 adminDashboard.hears('📊 Statistika', async (ctx) => {
-    await ctx.reply('📊 Hozircha statistika bo\'limi test rejimida.\n\nTez orada bu yerda jami xodimlar soni va hisobotlar chiqadi.');
+    await ctx.reply('⏳ Ma\'lumotlar yuklanmoqda...');
+
+    try {
+        const { getRows } = require('./sheets');
+        const rows = await getRows('Malumot1'); // Xodimlar sheet
+
+        if (!rows || rows.length <= 1) {
+            return ctx.reply('📭 Hozircha ro\'yxatdan o\'tganlar yo\'q.');
+        }
+
+        // Header row (0) ni tashlab ketamiz
+        const dataRows = rows.slice(1);
+        const total = dataRows.length;
+
+        let msg = `📊 **Jami ro'yxatdan o'tganlar:** ${total} ta\n\n`;
+        msg += `📱 **Telefon raqamlar:**\n`;
+
+        // Oxirgi 15 tani ko'rsatish (juda ko'payib ketsa xatolik bermasligi uchun)
+        const recent = dataRows.slice(-15).reverse();
+
+        recent.forEach((row, index) => {
+            // row[0] = Ism, row[1] = Familiya, row[3] = Telefon
+            // Agar sheet tartibi o'zgarmagan bo'lsa
+            const name = row[0] || '-';
+            const surname = row[1] || '';
+            const phone = row[3] || 'Yo\'q';
+            msg += `${index + 1}. ${name} ${surname} — ${phone}\n`;
+        });
+
+        if (total > 15) {
+            msg += `\n... va yana ${total - 15} kishi.`;
+        }
+
+        await ctx.reply(msg);
+    } catch (e) {
+        console.error('Statistika xatosi:', e);
+        await ctx.reply('❌ Statistika olishda xatolik bo\'ldi.');
+    }
 });
 
 adminDashboard.hears('👥 Foydalanuvchilar', async (ctx) => {

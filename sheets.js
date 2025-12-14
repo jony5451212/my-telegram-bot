@@ -61,4 +61,27 @@ async function appendDataToSheet(data, sheetName = 'Malumot1') {
     }
 }
 
-module.exports = { appendDataToSheet };
+async function getRows(sheetName = 'Malumot1') {
+    const auth = new google.auth.GoogleAuth({
+        keyFile: KEY_FILE_PATH,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    const client = await auth.getClient();
+    const googleSheets = google.sheets({ version: 'v4', auth: client });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    try {
+        const getRows = await googleSheets.spreadsheets.values.get({
+            auth,
+            spreadsheetId,
+            range: `${sheetName}!A:Z`,
+        });
+        return getRows.data.values || [];
+    } catch (error) {
+        console.error('Ma\'lumot o\'qishda xatolik:', error);
+        return [];
+    }
+}
+
+module.exports = { appendDataToSheet, getRows };

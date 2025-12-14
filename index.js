@@ -126,7 +126,7 @@ const wizardSteps = new Scenes.WizardScene(
 
         ctx.wizard.state.data.telefon = formatPhone(phoneRaw);
 
-        await ctx.reply('5. One ID loginingizni kiriting:', cancelKeyboard);
+        await ctx.reply('5. One ID loginingizni kiriting:', navKeyboard);
         return ctx.wizard.next();
     },
 

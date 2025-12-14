@@ -388,8 +388,7 @@ adminScene.on('text', async (ctx) => {
         );
         return ctx.scene.enter('admin_dashboard');
     } else {
-        [
-            await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
+        await ctx.reply('❌ Parol noto\'g\'ri! Qaytadan urining yoki /start bosing.');
     }
 });
 

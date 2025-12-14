@@ -1,6 +1,18 @@
 require('dotenv').config();
 const { Telegraf, Scenes, session, Markup } = require('telegraf');
 const { appendDataToSheet } = require('./sheets');
+const http = require('http'); // For Render
+
+// Dummy server to keep Render happy
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running properly!\n');
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 

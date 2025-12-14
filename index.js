@@ -325,7 +325,7 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         return ctx.wizard.next();
     },
 
-    // 4. Raqam qabul qilish va Sana so'rash (Step 3)
+    // 4. Raqam qabul qilish va Sana aniqlash (Step 3)
     async (ctx) => {
         if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
             await ctx.reply('Jarayon bekor qilindi.', mainMenu);
@@ -334,26 +334,58 @@ const dalolatnomaWizard = new Scenes.WizardScene(
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
         if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', navKeyboard);
 
-        // Format DKSH prefix
-        const numberInput = ctx.message.text.replace(/\D/g, ''); // faqat raqamlarni olamiz
+        // Remove non-digits
+        const numberInput = ctx.message.text.replace(/\D/g, '');
+
+        // Validation: Must be exactly 12 digits
+        if (numberInput.length !== 12) {
+            return ctx.reply('❌ Iltimos, faqat 12 xonali raqam kiriting.\nMasalan: 010120241234', navKeyboard);
+        }
+
         ctx.scene.state.data.raqam = `DKSH ${numberInput}`;
 
-        await ctx.reply('5. Dalolatnoma sanasini kiriting (kun.oy.yil):', navKeyboard);
+        // Extract Date: First 8 digits -> DDMMYYYY
+        const datePart = numberInput.substring(0, 8);
+        const day = datePart.substring(0, 2);
+        const month = datePart.substring(2, 4);
+        const year = datePart.substring(4, 8);
+
+        const formattedDate = `${day}.${month}.${year}`;
+        ctx.scene.state.data.sana = formattedDate;
+
+        // Ask for confirmation
+        await ctx.reply(`Dalolatnoma sanasi: ${formattedDate} kami?\n\nSanani tasdiqlaysizmi?`, Markup.keyboard([
+            ['✅ Ha', '❌ Yo\'q'],
+            ['🏠 Bosh menyu']
+        ]).resize());
+
         return ctx.wizard.next();
     },
 
-    // 5. Sana qabul qilish va TASDIQLASH (Step 4 -> Step 5)
+    // 5. Sanani tasdiqlash yoki Qo'lda kiritish (Step 4 -> Step 5)
     async (ctx) => {
         if (ctx.message && (ctx.message.text === '/start' || ctx.message.text === '🏠 Bosh menyu')) {
             await ctx.reply('Jarayon bekor qilindi.', mainMenu);
             return ctx.scene.leave();
         }
         if (!ctx.scene.state.data) ctx.scene.state.data = {};
-        if (!ctx.message || !ctx.message.text) return ctx.reply('Matn kiriting.', navKeyboard);
+        const text = ctx.message.text;
 
-        ctx.scene.state.data.sana = ctx.message.text;
+        // Agar "Ha" desa -> Summaryga o'tamiz
+        if (text === '✅ Ha') {
+            // Sana allaqachon state da bor
+        }
+        // Agar "Yo'q" desa -> Qo'lda kiritishni so'raymiz
+        else if (text === '❌ Yo\'q') {
+            await ctx.reply('Unda sanani qo\'lda kiriting (kun.oy.yil):', Markup.keyboard([['🏠 Bosh menyu']]).resize());
+            return; // Stay in this step
+        }
+        // Agar boshqa matn yozsa (Sana deb hisoblaymiz)
+        else {
+            ctx.scene.state.data.sana = text;
+        }
 
-        // Summary
+        // Summary generation
         const d = ctx.scene.state.data;
         const summary = `📋 **Dalolatnomani tekshiring:**\n\n` +
             `🏢 **Korxona:** ${d.korxona}\n` +

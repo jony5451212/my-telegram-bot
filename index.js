@@ -1,18 +1,7 @@
 require('dotenv').config();
 const { Telegraf, Scenes, session, Markup } = require('telegraf');
 const { appendDataToSheet } = require('./sheets');
-const http = require('http'); // For Render
-
-// Dummy server to keep Render happy
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is running properly!\n');
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// http server removed, Telegraf handles it now
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -296,9 +285,25 @@ bot.hears('Dalolatnoma kiritish', async (ctx) => {
     await ctx.scene.enter('dalolatnoma_wizard');
 });
 
-bot.launch().then(() => {
-    console.log('Bot ishga tushdi!');
-});
+const PORT = process.env.PORT || 3000;
+const URL = process.env.RENDER_EXTERNAL_URL; // Render automatically sets this
+
+if (URL) {
+    // Serverda (Render) -> Webhook
+    bot.launch({
+        webhook: {
+            domain: URL,
+            port: PORT
+        }
+    }).then(() => {
+        console.log(`✅ Bot Webhook rejimida ishga tushdi! URL: ${URL}`);
+    });
+} else {
+    // Kompyuterda -> Polling
+    bot.launch().then(() => {
+        console.log('✅ Bot Polling (local) rejimida ishga tushdi!');
+    });
+}
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));

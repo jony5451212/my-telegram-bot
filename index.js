@@ -394,45 +394,77 @@ adminScene.on('text', async (ctx) => {
 // ADMIN DASHBOARD SCENE (To keep admin context)
 const adminDashboard = new Scenes.BaseScene('admin_dashboard');
 
+// Helper to show stats page
+async function showStatsPage(ctx, page = 1, isEdit = false) {
+    const { getRows } = require('./sheets');
+    const rows = await getRows('Malumot1');
+
+    if (!rows || rows.length <= 1) {
+        const text = '📭 Hozircha ro\'yxatdan o\'tganlar yo\'q.';
+        if (isEdit) return ctx.editMessageText(text);
+        return ctx.reply(text);
+    }
+
+    // Header row dropped
+    const dataRows = rows.slice(1);
+    const totalItems = dataRows.length;
+    const ITEMS_PER_PAGE = 10;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+    // Validate page
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const pageItems = dataRows.slice(start, end);
+
+    let msg = `📊 **Jami ro'yxatdan o'tganlar:** ${totalItems} ta\n`;
+    msg += `📄 **Sahifa:** ${page} / ${totalPages}\n\n`;
+    msg += `📱 **Telefon raqamlar:**\n`;
+
+    pageItems.forEach((row, index) => {
+        const globalIndex = start + index + 1;
+        const name = row[0] || '-';
+        const surname = row[1] || '';
+        const phone = row[3] || 'Yo\'q';
+        msg += `${globalIndex}. ${name} ${surname} — ${phone}\n`;
+    });
+
+    // Buttons
+    const buttons = [];
+    const navigationRow = [];
+
+    if (page > 1) {
+        navigationRow.push(Markup.button.callback('⬅️ Oldingi', `stats:${page - 1}`));
+    }
+    if (page < totalPages) {
+        navigationRow.push(Markup.button.callback('Keyingi ➡️', `stats:${page + 1}`));
+    }
+
+    if (navigationRow.length > 0) buttons.push(navigationRow);
+    // Add "Update" button to refresh data
+    buttons.push([Markup.button.callback('🔄 Yangilash', `stats:${page}`)]);
+
+    const keyboard = Markup.inlineKeyboard(buttons);
+
+    if (isEdit) {
+        await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...keyboard });
+    } else {
+        await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
+    }
+}
+
 adminDashboard.hears('📊 Statistika', async (ctx) => {
     await ctx.reply('⏳ Ma\'lumotlar yuklanmoqda...');
+    await showStatsPage(ctx, 1, false);
+});
 
-    try {
-        const { getRows } = require('./sheets');
-        const rows = await getRows('Malumot1'); // Xodimlar sheet
-
-        if (!rows || rows.length <= 1) {
-            return ctx.reply('📭 Hozircha ro\'yxatdan o\'tganlar yo\'q.');
-        }
-
-        // Header row (0) ni tashlab ketamiz
-        const dataRows = rows.slice(1);
-        const total = dataRows.length;
-
-        let msg = `📊 **Jami ro'yxatdan o'tganlar:** ${total} ta\n\n`;
-        msg += `📱 **Telefon raqamlar:**\n`;
-
-        // Oxirgi 15 tani ko'rsatish (juda ko'payib ketsa xatolik bermasligi uchun)
-        const recent = dataRows.slice(-15).reverse();
-
-        recent.forEach((row, index) => {
-            // row[0] = Ism, row[1] = Familiya, row[3] = Telefon
-            // Agar sheet tartibi o'zgarmagan bo'lsa
-            const name = row[0] || '-';
-            const surname = row[1] || '';
-            const phone = row[3] || 'Yo\'q';
-            msg += `${index + 1}. ${name} ${surname} — ${phone}\n`;
-        });
-
-        if (total > 15) {
-            msg += `\n... va yana ${total - 15} kishi.`;
-        }
-
-        await ctx.reply(msg);
-    } catch (e) {
-        console.error('Statistika xatosi:', e);
-        await ctx.reply('❌ Statistika olishda xatolik bo\'ldi.');
-    }
+// Handle pagination actions
+adminDashboard.action(/stats:(\d+)/, async (ctx) => {
+    const page = parseInt(ctx.match[1]);
+    await showStatsPage(ctx, page, true);
+    await ctx.answerCbQuery();
 });
 
 adminDashboard.hears('👥 Foydalanuvchilar', async (ctx) => {

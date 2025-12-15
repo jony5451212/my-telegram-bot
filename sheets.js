@@ -37,9 +37,21 @@ async function appendDataToSheet(data, sheetName = 'Malumot1') {
             data.korxona,
             data.rasmiylashtirdi,
             data.tuman,
-            data.raqam, // DKSH prefix will be added in the wizard or here? Better in wizard for display equality
+            data.raqam,
             data.sana,
             new Date().toLocaleString()
+        ]];
+    } else if (sheetName === 'Zametkalar') {
+        values = [[
+            new Date().toLocaleString(),
+            data.matn
+        ]];
+    } else if (sheetName === 'Pul aylanmasi') {
+        values = [[
+            new Date().toLocaleString(),
+            data.turi,   // Kirim yoki Chiqim
+            data.summa,
+            data.tavsif
         ]];
     }
 

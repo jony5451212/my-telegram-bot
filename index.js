@@ -39,8 +39,20 @@ const mainMenu = Markup.keyboard([
 
 const adminKeyboard = Markup.keyboard([
     ['📊 Statistika', '👥 Foydalanuvchilar'],
+    ['🤖 Shaxsiy yordamchi'],
     ['📥 Ma\'lumotlarni yuklash'],
     ['🔙 Chiqish']
+]).resize();
+
+const assistantKeyboard = Markup.keyboard([
+    ['📝 Zametkalar'],
+    ['💰 Pul aylanmasi'],
+    ['🔙 Orqaga']
+]).resize();
+
+const moneyKeyboard = Markup.keyboard([
+    ['➕ Tushum', '➖ Xarajat'],
+    ['🔙 Orqaga']
 ]).resize();
 
 // Navigation keyboard for wizards

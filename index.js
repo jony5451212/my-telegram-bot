@@ -878,8 +878,8 @@ bot.on('message', async (ctx) => {
         return;
     }
 
-    // If not in a scene and no other handler matched
-    await ctx.reply('⚠️ Tushunmadim. Agar jarayon to\'xtab qolgan bo\'lsa, iltimos /start ni bosing.');
+    // If not in a scene and no other handler matched (likely session expired)
+    await ctx.reply('🔄 Sessiya yangilandi. Iltimos, quyidagi menyudan kerakli bo\'limni qayta tanlang:', mainMenu);
 });
 
 const PORT = process.env.PORT || 3000;

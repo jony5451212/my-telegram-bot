@@ -864,8 +864,21 @@ bot.hears('🏠 Bosh menyu', async (ctx) => {
 
 // Catch-all for unhandled messages
 bot.on('message', async (ctx) => {
+    const text = ctx.message.text;
+
+    // Check if user clicked an Admin button while session is expired
+    const adminButtons = [
+        '📊 Statistika', '👥 Foydalanuvchilar', '🤖 Shaxsiy yordamchi',
+        '📥 Ma\'lumotlarni yuklash', '📝 Zametkalar', '💰 Pul aylanmasi',
+        '➕ Tushum', '➖ Xarajat', '🔙 Orqaga'
+    ];
+
+    if (adminButtons.includes(text)) {
+        await ctx.reply('⏳ Sessiya vaqti tugagan. Iltimos, "🔒 Admin Panel" tugmasini bosib qaytadan kiring.', mainMenu);
+        return;
+    }
+
     // If not in a scene and no other handler matched
-    // We suggest /start to reset
     await ctx.reply('⚠️ Tushunmadim. Agar jarayon to\'xtab qolgan bo\'lsa, iltimos /start ni bosing.');
 });
 

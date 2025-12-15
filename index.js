@@ -481,6 +481,94 @@ dalolatnomaWizard.enter(async (ctx) => {
 });
 
 
+// ZAMETKALAR WIZARD
+const notesWizard = new Scenes.WizardScene(
+    'notes_wizard',
+    async (ctx) => {
+        await ctx.reply('📝 Zametka matnini kiriting:', Markup.keyboard([['🔙 Orqaga']]).resize());
+        return ctx.wizard.next();
+    },
+    async (ctx) => {
+        if (ctx.message.text === '🔙 Orqaga') {
+            await ctx.reply('Shaxsiy yordamchi:', assistantKeyboard);
+            return ctx.scene.leave();
+        }
+
+        const text = ctx.message.text;
+        try {
+            await appendDataToSheet({ matn: text }, 'Zametkalar');
+            await ctx.reply('✅ Zametka saqlandi!', assistantKeyboard);
+        } catch (e) {
+            await ctx.reply('❌ Xatolik yuz berdi.', assistantKeyboard);
+        }
+        return ctx.scene.leave();
+    }
+);
+
+// PUL AYLANMASI WIZARD
+const moneyWizard = new Scenes.WizardScene(
+    'money_wizard',
+    // 1. Turi tanlanadi (Enter handlerda set qilinadi yoki shu yerda so'raladi)
+    async (ctx) => {
+        // We expect the user to have clicked Tushum/Xarajat to enter.
+        // But to be robust, we can ask here if not set.
+        if (!ctx.wizard.state.type) {
+            await ctx.reply('Turini tanlang:', moneyKeyboard);
+            return ctx.wizard.next();
+        }
+        // If type is already set by enter handler, skip to amount
+        await ctx.reply(`${ctx.wizard.state.type} summasini kiriting:`, Markup.keyboard([['🔙 Orqaga']]).resize());
+        return ctx.wizard.selectStep(2);
+    },
+    // 2. Handle Type Selection (if manually asked)
+    async (ctx) => {
+        const text = ctx.message.text;
+        if (text === '🔙 Orqaga') {
+            await ctx.reply('Shaxsiy yordamchi:', assistantKeyboard);
+            return ctx.scene.leave();
+        }
+        if (text === '➕ Tushum' || text === '➖ Xarajat') {
+            ctx.wizard.state.type = text;
+            await ctx.reply(`${text} summasini kiriting:`, Markup.keyboard([['🔙 Orqaga']]).resize());
+            return ctx.wizard.next();
+        }
+        await ctx.reply('Iltimos, tugmalardan birini tanlang.');
+    },
+    // 3. Amount
+    async (ctx) => {
+        if (ctx.message.text === '🔙 Orqaga') {
+            await ctx.reply('Shaxsiy yordamchi:', assistantKeyboard);
+            return ctx.scene.leave();
+        }
+        ctx.wizard.state.amount = ctx.message.text;
+        await ctx.reply('Tavsif (Nima uchun?):', Markup.keyboard([['🔙 Orqaga']]).resize());
+        return ctx.wizard.next();
+    },
+    // 4. Description & Save
+    async (ctx) => {
+        if (ctx.message.text === '🔙 Orqaga') {
+            await ctx.reply('Shaxsiy yordamchi:', assistantKeyboard);
+            return ctx.scene.leave();
+        }
+
+        const data = {
+            turi: ctx.wizard.state.type,
+            summa: ctx.wizard.state.amount,
+            tavsif: ctx.message.text
+        };
+
+        try {
+            await appendDataToSheet(data, 'Pul aylanmasi');
+            await ctx.reply('✅ Muvaffaqiyatli saqlandi!', moneyKeyboard); // Go back to Money Menu
+        } catch (e) {
+            console.error(e);
+            await ctx.reply('❌ Xatolik yuz berdi.', moneyKeyboard);
+        }
+        return ctx.scene.leave();
+    }
+);
+
+
 // ADMIN PANEL SCENE
 const adminScene = new Scenes.BaseScene('admin_scene');
 
@@ -694,6 +782,28 @@ adminDashboard.hears('👥 Foydalanuvchilar', async (ctx) => {
     await ctx.reply('👥 Bu yerda foydalanuvchilar ro\'yxati bo\'ladi.');
 });
 
+adminDashboard.hears('🤖 Shaxsiy yordamchi', async (ctx) => {
+    await ctx.reply('Shaxsiy yordamchi bo\'limi:', assistantKeyboard);
+});
+
+adminDashboard.hears('🔙 Orqaga', async (ctx) => {
+    await ctx.reply('Admin Panel:', adminKeyboard);
+});
+
+// Assistant Menu Handlers
+adminDashboard.hears('📝 Zametkalar', async (ctx) => {
+    await ctx.scene.enter('notes_wizard');
+});
+
+adminDashboard.hears('💰 Pul aylanmasi', async (ctx) => {
+    await ctx.reply('Pul aylanmasi turi:', moneyKeyboard);
+});
+
+// Money Menu Handlers (trigger wizard with state)
+adminDashboard.hears(['➕ Tushum', '➖ Xarajat'], async (ctx) => {
+    await ctx.scene.enter('money_wizard', { type: ctx.message.text });
+});
+
 adminDashboard.hears('🔙 Chiqish', async (ctx) => {
     await ctx.reply('Admin rejimidan chiqdingiz.', mainMenu);
     return ctx.scene.leave();
@@ -706,7 +816,7 @@ adminDashboard.command('start', (ctx) => {
 });
 
 
-const stage = new Scenes.Stage([wizardSteps, dalolatnomaWizard, adminScene, adminDashboard]);
+const stage = new Scenes.Stage([wizardSteps, dalolatnomaWizard, adminScene, adminDashboard, notesWizard, moneyWizard]);
 bot.use(session());
 bot.use(stage.middleware());
 
